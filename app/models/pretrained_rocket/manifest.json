@@ -1,0 +1,178 @@
+{
+  "bundle_version": "1.0",
+  "schema": {
+    "names": [
+      "altitude_m",
+      "velocity_ms",
+      "accel_ms2",
+      "mach",
+      "dynamic_pressure_pa",
+      "mass_kg",
+      "thrust_n",
+      "drag_n",
+      "chamber_pressure_bar",
+      "nozzle_temp_c",
+      "vibration_g",
+      "airframe_temp_c",
+      "battery_v"
+    ],
+    "n_features": 13,
+    "min": [
+      0.06675112467679101,
+      -130.67214094476606,
+      -256.71303732892,
+      0.0,
+      0.00019405362103552468,
+      2.021061218262299,
+      0.0,
+      -47.09042854812949,
+      0.9337227274179473,
+      288.5545512942659,
+      0.37859657224147386,
+      17.481467249297125,
+      11.351299031666331
+    ],
+    "max": [
+      2723.7298043253013,
+      333.9690675453573,
+      149.75005976633418,
+      0.992249173248909,
+      61018.000938346864,
+      7.278008910304132,
+      658.4252725594528,
+      509.94334460664265,
+      57.13356301764611,
+      1447.6971985923599,
+      11.62552494868884,
+      50.11978574794737,
+      12.454226144902751
+    ],
+    "clip_range": [
+      -0.5,
+      1.5
+    ],
+    "dropped_constant": [],
+    "formula": "x_scaled = clip((x - min) / (max - min), -0.5, 1.5)"
+  },
+  "window": 30,
+  "horizon": 15,
+  "labelled": true,
+  "class_labels": [
+    "healthy",
+    "degrading",
+    "critical"
+  ],
+  "calibration": {
+    "reference": 0.00020263031183276325,
+    "spread": 0.002921895970939632,
+    "threshold": 0.00896831822465166,
+    "n_baseline": 5465,
+    "percentile": 99.0,
+    "half_life": 3.0,
+    "threshold_deviations": 3.0,
+    "health_formula": "100 * 2 ** (-max(d, 0) / half_life), d = (score - reference) / spread"
+  },
+  "feature_importances": [
+    {
+      "feature": "airframe_temp_c",
+      "importance": 50.26143971039841
+    },
+    {
+      "feature": "mass_kg",
+      "importance": 16.00272426557363
+    },
+    {
+      "feature": "dynamic_pressure_pa",
+      "importance": 9.904096311197597
+    },
+    {
+      "feature": "chamber_pressure_bar",
+      "importance": 9.080126636929613
+    },
+    {
+      "feature": "mach",
+      "importance": 6.413755217717611
+    },
+    {
+      "feature": "accel_ms2",
+      "importance": 2.179070759348574
+    },
+    {
+      "feature": "altitude_m",
+      "importance": 1.9427813285573594
+    },
+    {
+      "feature": "drag_n",
+      "importance": 1.3746899408535405
+    },
+    {
+      "feature": "nozzle_temp_c",
+      "importance": 1.3177703904378755
+    },
+    {
+      "feature": "velocity_ms",
+      "importance": 0.6375614603446851
+    },
+    {
+      "feature": "vibration_g",
+      "importance": 0.6296285925483572
+    },
+    {
+      "feature": "thrust_n",
+      "importance": 0.20178446617539667
+    },
+    {
+      "feature": "battery_v",
+      "importance": 0.054570919917325
+    }
+  ],
+  "metrics": {
+    "autoencoder": {
+      "reconstruction_mse": 0.0003832529874114628,
+      "layers": [
+        13,
+        26,
+        13,
+        4
+      ]
+    },
+    "health": {
+      "rmse_health_points": 1.092183942461119,
+      "mae_health_points": 0.6890376225319897
+    },
+    "stage": {
+      "train_accuracy": 0.9982153480071386,
+      "recall_per_class": {
+        "healthy": 0.9996859296482412,
+        "degrading": 0.9950380416804498,
+        "critical": 0.9985611510791367
+      },
+      "class_counts": {
+        "healthy": 6368,
+        "degrading": 3023,
+        "critical": 695
+      }
+    },
+    "baseline": {
+      "reference": 0.00020263031183276325,
+      "spread": 0.002921895970939632,
+      "threshold": 0.00896831822465166,
+      "n_baseline": 5465,
+      "percentile": 99.0,
+      "half_life": 3.0,
+      "threshold_deviations": 3.0,
+      "health_formula": "100 * 2 ** (-max(d, 0) / half_life), d = (score - reference) / spread"
+    },
+    "lead_channel": "chamber_pressure_bar",
+    "n_rows": 10086,
+    "n_channels": 13
+  },
+  "elapsed_s": 25.277664500055835,
+  "source": "rocket flight simulation (supervised on nozzle condition)",
+  "files": {
+    "autoencoder": "autoencoder.pt",
+    "stage_lstm": "stage_lstm.pt",
+    "health": "health.cbm",
+    "gp": "gp.pkl"
+  }
+}

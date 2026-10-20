@@ -1,0 +1,382 @@
+{
+  "name": "gpr",
+  "task": "sensor_trajectory_forecast_with_uncertainty",
+  "schema_version": "1.0",
+  "created_utc": "2026-09-19T17:32:21+00:00",
+  "library_versions": {
+    "python": "3.13.2",
+    "numpy": "2.2.6",
+    "torch": "2.11.0+cpu",
+    "sklearn": "1.8.0",
+    "catboost": "1.2.10",
+    "lightgbm": "4.7.0",
+    "onnx": "1.23.0"
+  },
+  "dataset": {
+    "name": "NASA C-MAPSS FD001",
+    "files": [
+      "train_FD001.txt",
+      "test_FD001.txt",
+      "RUL_FD001.txt"
+    ],
+    "split_by": "engine unit id",
+    "split_seed": 1337,
+    "engines": {
+      "train": 70,
+      "val": 15,
+      "test": 15
+    },
+    "rul_ceiling": 125
+  },
+  "input": {
+    "feature_names": [
+      "s11"
+    ],
+    "n_features": 1,
+    "shape": [
+      30,
+      1
+    ],
+    "dtype": "float32",
+    "layout": "(batch, 30, 1) -- axis 1 is time, oldest first",
+    "window_length": 30,
+    "requires_normalization": true,
+    "feature_order_is_binding": true
+  },
+  "normalization": {
+    "mode": "global",
+    "method": "min_max",
+    "feature_names": [
+      "op1",
+      "op2",
+      "s2",
+      "s3",
+      "s4",
+      "s6",
+      "s7",
+      "s8",
+      "s9",
+      "s11",
+      "s12",
+      "s13",
+      "s14",
+      "s15",
+      "s17",
+      "s20",
+      "s21"
+    ],
+    "min": [
+      -0.0087,
+      -0.0006,
+      641.21,
+      1571.04,
+      1385.19,
+      21.6,
+      550.34,
+      2387.9,
+      9021.73,
+      46.85,
+      518.69,
+      2387.88,
+      8102.82,
+      8.3279,
+      388.0,
+      38.14,
+      22.8942
+    ],
+    "max": [
+      0.0087,
+      0.0006,
+      644.53,
+      1614.93,
+      1438.51,
+      21.61,
+      555.86,
+      2388.56,
+      9244.59,
+      48.53,
+      523.38,
+      2388.56,
+      8293.72,
+      8.5836,
+      400.0,
+      39.43,
+      23.6184
+    ],
+    "clip_range": [
+      -0.5,
+      1.5
+    ],
+    "formula": "x_scaled = clip((x - min) / (max - min), -0.5, 1.5)"
+  },
+  "output": {
+    "shape": [
+      15
+    ],
+    "dtype": "float64",
+    "meaning": "posterior mean of normalized s11 for the next 15 cycles",
+    "returns": {
+      "mean": "predict(future_t) -> (15,)",
+      "std": "predict(future_t, return_std=True) -> (mean, std), each (15,)"
+    },
+    "confidence_interval": {
+      "level": 0.95,
+      "z": 1.959963984540054,
+      "lower": "mean - 1.959963984540054 * std",
+      "upper": "mean + 1.959963984540054 * std",
+      "includes_observation_noise": true
+    },
+    "units": "normalized; to recover raw s11 units multiply by (normalization.max - normalization.min) at this sensor's index and add normalization.min"
+  },
+  "thresholds": {},
+  "artifacts": {
+    "sklearn_pickle": "gpr.pkl"
+  },
+  "inference": {
+    "protocol": [
+      "1. Keep a rolling buffer of the last 30 cycles of s11.",
+      "2. Normalize each value using normalization.min/max at this sensor's index.",
+      "3. gp = joblib.load('gpr.pkl')",
+      "4. past_t = (numpy.arange(30) / 30).reshape(-1, 1)",
+      "5. gp.fit(past_t, buffer)  -- optimizer is None, so this only conditions (one 30x30 Cholesky, sub-millisecond); it does NOT refit hyperparameters",
+      "6. future_t = (numpy.arange(30, 45) / 30).reshape(-1, 1)",
+      "7. mean, std = gp.predict(future_t, return_std=True)",
+      "8. band = mean +/- 1.959963984540054 * std"
+    ],
+    "time_grid": {
+      "past_t": "arange(30) / 30",
+      "future_t": "arange(30, 45) / 30",
+      "note": "time is divided by the window length; a different grid invalidates the learned length scale"
+    },
+    "loader": "joblib.load -- a plain sklearn GaussianProcessRegressor; no import from ml/ is required",
+    "requires": [
+      "scikit-learn",
+      "joblib",
+      "numpy",
+      "scipy"
+    ],
+    "refit_per_call": true,
+    "stateless": false,
+    "normalize_y": true,
+    "cost": "one Cholesky of the 30x30 window Gram matrix per call"
+  },
+  "metrics": {
+    "target_sensor": "s11",
+    "window": 30,
+    "horizon": 15,
+    "kernel": "0.0529**2 * DotProduct(sigma_0=0.001) + 7.46**2 * RBF(length_scale=3.32) + WhiteKernel(noise_level=1.02)",
+    "train": {
+      "n_windows": 1173,
+      "n_points": 17595,
+      "rmse_normalized": 0.06846787747155768,
+      "rmse_raw_sensor_units": 0.11502603415221688,
+      "mae_normalized": 0.05471676508390507,
+      "coverage_95": 0.9476555839727195,
+      "nominal_coverage": 0.95,
+      "coverage_error": -0.002344416027280416,
+      "mean_interval_width_normalized": 0.27604921210458294,
+      "mean_negative_log_likelihood": -1.2467251615953907,
+      "rmse_by_horizon_step": [
+        0.0643706538834888,
+        0.06473364146789336,
+        0.06461087900268048,
+        0.0628640840576195,
+        0.06657574319013573,
+        0.06480560361205968,
+        0.06613147595309381,
+        0.06743811793812976,
+        0.06987726259426441,
+        0.07120291149826526,
+        0.07006969542765508,
+        0.07300302703239528,
+        0.07207112614037194,
+        0.07171148074693319,
+        0.07599491764935092
+      ],
+      "coverage_by_horizon_step": [
+        0.9454390451832907,
+        0.9454390451832907,
+        0.947996589940324,
+        0.9497016197783461,
+        0.9522591645353794,
+        0.9582267689684569,
+        0.9497016197783461,
+        0.9531116794543905,
+        0.948849104859335,
+        0.9369138959931799,
+        0.948849104859335,
+        0.9386189258312021,
+        0.947996589940324,
+        0.9471440750213129,
+        0.9445865302642796
+      ],
+      "baseline_persistence_rmse": 0.08974852585072012,
+      "baseline_linear_extrapolation_rmse": 0.06862589437311706
+    },
+    "val": {
+      "n_windows": 223,
+      "n_points": 3345,
+      "rmse_normalized": 0.07002856505325611,
+      "rmse_raw_sensor_units": 0.11764798928947025,
+      "mae_normalized": 0.05608735360227023,
+      "coverage_95": 0.9479820627802691,
+      "nominal_coverage": 0.95,
+      "coverage_error": -0.00201793721973087,
+      "mean_interval_width_normalized": 0.27798322855491747,
+      "mean_negative_log_likelihood": -1.2247369692441494,
+      "rmse_by_horizon_step": [
+        0.06316415124597007,
+        0.06127989963688473,
+        0.07039792233293986,
+        0.06489127837635453,
+        0.06685670263533429,
+        0.06825982332408873,
+        0.06946586565747932,
+        0.06679434113221087,
+        0.06650807530153188,
+        0.07357922660387287,
+        0.07272084986545489,
+        0.07284107925405146,
+        0.07729009313080193,
+        0.07468062303721555,
+        0.07905554472213008
+      ],
+      "coverage_by_horizon_step": [
+        0.9461883408071748,
+        0.9641255605381166,
+        0.9192825112107623,
+        0.9551569506726457,
+        0.9596412556053812,
+        0.9596412556053812,
+        0.9417040358744395,
+        0.9596412556053812,
+        0.9461883408071748,
+        0.9327354260089686,
+        0.9372197309417041,
+        0.9461883408071748,
+        0.9461883408071748,
+        0.9506726457399103,
+        0.9551569506726457
+      ],
+      "baseline_persistence_rmse": 0.09202244014900245,
+      "baseline_linear_extrapolation_rmse": 0.0698620864954181
+    },
+    "test": {
+      "n_windows": 273,
+      "n_points": 4095,
+      "rmse_normalized": 0.06767071328016683,
+      "rmse_raw_sensor_units": 0.11368679831068025,
+      "mae_normalized": 0.05396281169536713,
+      "coverage_95": 0.947985347985348,
+      "nominal_coverage": 0.95,
+      "coverage_error": -0.0020146520146520075,
+      "mean_interval_width_normalized": 0.2766073630637634,
+      "mean_negative_log_likelihood": -1.2567695766639801,
+      "rmse_by_horizon_step": [
+        0.06248718913896702,
+        0.06629390381503965,
+        0.06266577816280747,
+        0.06737087983152913,
+        0.06287805314382737,
+        0.06364292635927998,
+        0.06832618476758515,
+        0.06659033933793126,
+        0.06770210924189889,
+        0.06737341392027718,
+        0.0691146009573112,
+        0.07523634445819011,
+        0.07137222925741782,
+        0.07487373687441255,
+        0.0675095823618707
+      ],
+      "coverage_by_horizon_step": [
+        0.9633699633699634,
+        0.9230769230769231,
+        0.9487179487179487,
+        0.945054945054945,
+        0.9560439560439561,
+        0.9523809523809523,
+        0.9157509157509157,
+        0.9633699633699634,
+        0.945054945054945,
+        0.945054945054945,
+        0.967032967032967,
+        0.9413919413919414,
+        0.945054945054945,
+        0.9377289377289377,
+        0.9706959706959707
+      ],
+      "baseline_persistence_rmse": 0.09082586365436812,
+      "baseline_linear_extrapolation_rmse": 0.06742338522910733
+    },
+    "official": {
+      "n_windows": 916,
+      "n_points": 13740,
+      "rmse_normalized": 0.06838938140755182,
+      "rmse_raw_sensor_units": 0.11489416076468704,
+      "mae_normalized": 0.05453050082218591,
+      "coverage_95": 0.9473071324599709,
+      "nominal_coverage": 0.95,
+      "coverage_error": -0.0026928675400290647,
+      "mean_interval_width_normalized": 0.27283105140437974,
+      "mean_negative_log_likelihood": -1.2512113082979361,
+      "rmse_by_horizon_step": [
+        0.06523843626008217,
+        0.0662030944778085,
+        0.06318819161131241,
+        0.06737212010181645,
+        0.06493597456662398,
+        0.06627752348755364,
+        0.07011364937330342,
+        0.06778801255319163,
+        0.06896475832846734,
+        0.06980977779309494,
+        0.06991440781777909,
+        0.07258585979604891,
+        0.06924464005050586,
+        0.07264006029539205,
+        0.0707655041483448
+      ],
+      "coverage_by_horizon_step": [
+        0.9323144104803494,
+        0.9454148471615721,
+        0.9508733624454149,
+        0.9355895196506551,
+        0.9497816593886463,
+        0.9497816593886463,
+        0.9388646288209607,
+        0.9497816593886463,
+        0.9486899563318777,
+        0.9497816593886463,
+        0.9399563318777293,
+        0.9497816593886463,
+        0.9606986899563319,
+        0.9508733624454149,
+        0.9574235807860262
+      ],
+      "baseline_persistence_rmse": 0.0864050166498565,
+      "baseline_linear_extrapolation_rmse": 0.06941132816037736
+    }
+  },
+  "kernel_detail": {
+    "expression": "C * DotProduct + C * RBF + WhiteKernel",
+    "fitted": "0.0529**2 * DotProduct(sigma_0=0.001) + 7.46**2 * RBF(length_scale=3.32) + WhiteKernel(noise_level=1.02)",
+    "theta_log": [
+      -5.878579977469319,
+      -6.907755240616035,
+      4.020009659750269,
+      1.2006681585873138,
+      0.021905870867450643
+    ],
+    "hyperparameters_fit_by": "two stages: (1) mean log marginal likelihood as initializer, (2) mean predictive NLL of the held-out future window, which is the deployed task and also calibrates the interval",
+    "normalize_y": true,
+    "alpha": 1e-08
+  },
+  "target_sensor": {
+    "name": "s11",
+    "feature_index_in_shared_contract": 9,
+    "chosen_because": "strongest monotonic degradation trend in FD001 (mean per-engine Spearman vs cycle = +0.81)",
+    "raw_min": 46.85,
+    "raw_max": 48.53
+  }
+}

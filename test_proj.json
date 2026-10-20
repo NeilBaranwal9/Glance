@@ -1,0 +1,155 @@
+{
+    "parameters": [
+        {
+            "id": "temp_sensor",
+            "name": "Temperature",
+            "array_index": 0,
+            "sensor_group": "Temperature",
+            "unit": "\u00b0C",
+            "description": "Ambient temperature sensor",
+            "color": "#FF3131",
+            "decimals": 1,
+            "threshold": {
+                "low_crit": -10,
+                "low_warn": 0,
+                "high_warn": 80,
+                "high_crit": 100
+            }
+        },
+        {
+            "id": "humidity",
+            "name": "Humidity",
+            "array_index": 1,
+            "sensor_group": "Environmental",
+            "unit": "%",
+            "description": "Relative humidity sensor",
+            "color": "#00BFFF",
+            "decimals": 1,
+            "threshold": {
+                "low_crit": 0,
+                "low_warn": 20,
+                "high_warn": 80,
+                "high_crit": 100
+            }
+        },
+        {
+            "id": "pressure",
+            "name": "Pressure",
+            "array_index": 2,
+            "sensor_group": "Environmental",
+            "unit": "hPa",
+            "description": "Atmospheric pressure sensor",
+            "color": "#21b35a",
+            "decimals": 2,
+            "threshold": {
+                "low_crit": 800,
+                "low_warn": 900,
+                "high_warn": 1100,
+                "high_crit": 1200
+            }
+        },
+        {
+            "id": "accel_x",
+            "name": "Acceleration X",
+            "array_index": 3,
+            "sensor_group": "IMU",
+            "unit": "m/s\u00b2",
+            "description": "X-axis acceleration from IMU",
+            "color": "#FFBF00",
+            "decimals": 2,
+            "threshold": {
+                "low_crit": -20,
+                "low_warn": -10,
+                "high_warn": 10,
+                "high_crit": 20
+            }
+        },
+        {
+            "id": "accel_y",
+            "name": "Acceleration Y",
+            "array_index": 4,
+            "sensor_group": "IMU",
+            "unit": "m/s\u00b2",
+            "description": "Y-axis acceleration from IMU",
+            "color": "#F012BE",
+            "decimals": 2,
+            "threshold": {
+                "low_crit": -20,
+                "low_warn": -10,
+                "high_warn": 10,
+                "high_crit": 20
+            }
+        },
+        {
+            "id": "accel_z",
+            "name": "Acceleration Z",
+            "array_index": 5,
+            "sensor_group": "IMU",
+            "unit": "m/s\u00b2",
+            "description": "Z-axis acceleration from IMU",
+            "color": "#39CCCC",
+            "decimals": 2,
+            "threshold": {
+                "low_crit": -20,
+                "low_warn": -10,
+                "high_warn": 10,
+                "high_crit": 20
+            }
+        },
+        {
+            "id": "gps_lat",
+            "name": "GPS Latitude",
+            "array_index": 6,
+            "sensor_group": "GPS",
+            "unit": "\u00b0",
+            "description": "GPS latitude coordinate",
+            "color": "#FF851B",
+            "decimals": 6,
+            "threshold": {
+                "low_crit": -90,
+                "low_warn": -80,
+                "high_warn": 80,
+                "high_crit": 90
+            }
+        },
+        {
+            "id": "gps_lon",
+            "name": "GPS Longitude",
+            "array_index": 7,
+            "sensor_group": "GPS",
+            "unit": "\u00b0",
+            "description": "GPS longitude coordinate",
+            "color": "#FF851B",
+            "decimals": 6,
+            "threshold": {
+                "low_crit": -180,
+                "low_warn": -170,
+                "high_warn": 170,
+                "high_crit": 180
+            }
+        }
+    ],
+    "layout": {},
+    "connection_settings": {
+        "mode": "dummy",
+        "serial_port": "COM4",
+        "baudrate": 115200,
+        "tcp_host": "127.0.0.1",
+        "tcp_port": 9000,
+        "udp_host": "0.0.0.0",
+        "udp_port": 9000,
+        "timeout": 1.0
+    },
+    "logging_settings": null,
+    "configured_widgets": [],
+    "dashboard_title_text": "Dashboard",
+    "dashboard_title_alignment": "1",
+    "filters": {},
+    "version": "1.0",
+    "created": "2026-07-26T17:11:42.874230",
+    "ml_analysis_settings": {
+        "version": 1,
+        "engine_id": 5,
+        "cursor": 0
+    }
+}

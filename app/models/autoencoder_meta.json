@@ -1,0 +1,212 @@
+{
+  "name": "autoencoder",
+  "task": "anomaly_detection_via_reconstruction_error",
+  "schema_version": "1.0",
+  "created_utc": "2026-09-19T17:31:38+00:00",
+  "library_versions": {
+    "python": "3.13.2",
+    "numpy": "2.2.6",
+    "torch": "2.11.0+cpu",
+    "sklearn": "1.8.0",
+    "catboost": "1.2.10",
+    "lightgbm": "4.7.0",
+    "onnx": "1.23.0"
+  },
+  "dataset": {
+    "name": "NASA C-MAPSS FD001",
+    "files": [
+      "train_FD001.txt",
+      "test_FD001.txt",
+      "RUL_FD001.txt"
+    ],
+    "split_by": "engine unit id",
+    "split_seed": 1337,
+    "engines": {
+      "train": 70,
+      "val": 15,
+      "test": 15
+    },
+    "rul_ceiling": 125
+  },
+  "input": {
+    "feature_names": [
+      "op1",
+      "op2",
+      "s2",
+      "s3",
+      "s4",
+      "s6",
+      "s7",
+      "s8",
+      "s9",
+      "s11",
+      "s12",
+      "s13",
+      "s14",
+      "s15",
+      "s17",
+      "s20",
+      "s21"
+    ],
+    "n_features": 17,
+    "shape": [
+      -1,
+      17
+    ],
+    "dtype": "float32",
+    "layout": "(batch, 17) -- one cycle per row",
+    "window_length": null,
+    "requires_normalization": true,
+    "feature_order_is_binding": true
+  },
+  "normalization": {
+    "mode": "global",
+    "method": "min_max",
+    "feature_names": [
+      "op1",
+      "op2",
+      "s2",
+      "s3",
+      "s4",
+      "s6",
+      "s7",
+      "s8",
+      "s9",
+      "s11",
+      "s12",
+      "s13",
+      "s14",
+      "s15",
+      "s17",
+      "s20",
+      "s21"
+    ],
+    "min": [
+      -0.0087,
+      -0.0006,
+      641.21,
+      1571.04,
+      1385.19,
+      21.6,
+      550.34,
+      2387.9,
+      9021.73,
+      46.85,
+      518.69,
+      2387.88,
+      8102.82,
+      8.3279,
+      388.0,
+      38.14,
+      22.8942
+    ],
+    "max": [
+      0.0087,
+      0.0006,
+      644.53,
+      1614.93,
+      1438.51,
+      21.61,
+      555.86,
+      2388.56,
+      9244.59,
+      48.53,
+      523.38,
+      2388.56,
+      8293.72,
+      8.5836,
+      400.0,
+      39.43,
+      23.6184
+    ],
+    "clip_range": [
+      -0.5,
+      1.5
+    ],
+    "formula": "x_scaled = clip((x - min) / (max - min), -0.5, 1.5)"
+  },
+  "output": {
+    "shape": [
+      -1,
+      17
+    ],
+    "dtype": "float32",
+    "meaning": "reconstruction of the normalized input row",
+    "anomaly_score": {
+      "formula": "mean((output - input) ** 2, axis=-1)",
+      "computed_by": "app (not baked into the graph, so the threshold stays tunable)",
+      "direction": "higher = more anomalous"
+    }
+  },
+  "thresholds": {
+    "reconstruction_error": 0.007646678015589714,
+    "percentile_of_healthy_train": 99.0,
+    "decision_rule": "fault if anomaly_score > reconstruction_error",
+    "fault_label_definition": "RUL < 30 cycles"
+  },
+  "artifacts": {
+    "torchscript": "autoencoder.pt",
+    "onnx": "autoencoder.onnx"
+  },
+  "inference": {
+    "protocol": [
+      "1. Collect one telemetry cycle as the 17 raw features, in input.feature_names order.",
+      "2. Normalize with normalization.min/max per the stated formula.",
+      "3. Run the graph: (1, 17) float32 -> (1, 17) float32 reconstruction.",
+      "4. score = mean((recon - x) ** 2).",
+      "5. Flag a fault when score > thresholds.reconstruction_error."
+    ],
+    "onnx_input_name": "input",
+    "onnx_output_name": "output",
+    "stateless": true,
+    "healthy_baseline": "trained only on the first 30% of each engine's life"
+  },
+  "metrics": {
+    "best_val_reconstruction_mse": 0.0031653328333050013,
+    "best_epoch": 175,
+    "healthy_train_error_mean": 0.0031764705199748278,
+    "healthy_train_error_p99": 0.007646678015589714,
+    "val": {
+      "auroc": 0.8649334649927117,
+      "average_precision": 0.6911396179723039,
+      "precision_at_threshold": 0.6418269230769231,
+      "recall_at_threshold": 0.5933333333333334,
+      "f1_at_threshold": 0.6166281755196305,
+      "flagged_fraction": 0.14788482047635976,
+      "fault_prevalence": 0.15997156061144685
+    },
+    "test": {
+      "auroc": 0.8681027545651501,
+      "average_precision": 0.6204104435979308,
+      "precision_at_threshold": 0.6256281407035176,
+      "recall_at_threshold": 0.5533333333333333,
+      "f1_at_threshold": 0.5872641509433962,
+      "flagged_fraction": 0.11980734497290789,
+      "fault_prevalence": 0.13546056592414207
+    },
+    "official": {
+      "auroc": 0.8254725979650164,
+      "average_precision": 0.30978160020902074,
+      "precision_at_threshold": 0.28841607565011823,
+      "recall_at_threshold": 0.3973941368078176,
+      "f1_at_threshold": 0.33424657534246577,
+      "flagged_fraction": 0.032299938912645085,
+      "fault_prevalence": 0.02344227244960293
+    }
+  },
+  "architecture": {
+    "type": "dense_autoencoder",
+    "layers": [
+      17,
+      32,
+      16,
+      4,
+      16,
+      32,
+      17
+    ],
+    "activation": "tanh",
+    "bottleneck": 4,
+    "parameters": 2357
+  }
+}

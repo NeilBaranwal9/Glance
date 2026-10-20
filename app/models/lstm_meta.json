@@ -1,0 +1,336 @@
+{
+  "name": "lstm",
+  "task": "degradation_stage_classification",
+  "schema_version": "1.0",
+  "created_utc": "2026-09-19T17:33:34+00:00",
+  "library_versions": {
+    "python": "3.13.2",
+    "numpy": "2.2.6",
+    "torch": "2.11.0+cpu",
+    "sklearn": "1.8.0",
+    "catboost": "1.2.10",
+    "lightgbm": "4.7.0",
+    "onnx": "1.23.0"
+  },
+  "dataset": {
+    "name": "NASA C-MAPSS FD001",
+    "files": [
+      "train_FD001.txt",
+      "test_FD001.txt",
+      "RUL_FD001.txt"
+    ],
+    "split_by": "engine unit id",
+    "split_seed": 1337,
+    "engines": {
+      "train": 70,
+      "val": 15,
+      "test": 15
+    },
+    "rul_ceiling": 125
+  },
+  "input": {
+    "feature_names": [
+      "op1",
+      "op2",
+      "s2",
+      "s3",
+      "s4",
+      "s6",
+      "s7",
+      "s8",
+      "s9",
+      "s11",
+      "s12",
+      "s13",
+      "s14",
+      "s15",
+      "s17",
+      "s20",
+      "s21"
+    ],
+    "n_features": 17,
+    "shape": [
+      -1,
+      30,
+      17
+    ],
+    "dtype": "float32",
+    "layout": "(batch, 30, 17) -- axis 1 is time, oldest first",
+    "window_length": 30,
+    "requires_normalization": true,
+    "feature_order_is_binding": true
+  },
+  "normalization": {
+    "mode": "global",
+    "method": "min_max",
+    "feature_names": [
+      "op1",
+      "op2",
+      "s2",
+      "s3",
+      "s4",
+      "s6",
+      "s7",
+      "s8",
+      "s9",
+      "s11",
+      "s12",
+      "s13",
+      "s14",
+      "s15",
+      "s17",
+      "s20",
+      "s21"
+    ],
+    "min": [
+      -0.0087,
+      -0.0006,
+      641.21,
+      1571.04,
+      1385.19,
+      21.6,
+      550.34,
+      2387.9,
+      9021.73,
+      46.85,
+      518.69,
+      2387.88,
+      8102.82,
+      8.3279,
+      388.0,
+      38.14,
+      22.8942
+    ],
+    "max": [
+      0.0087,
+      0.0006,
+      644.53,
+      1614.93,
+      1438.51,
+      21.61,
+      555.86,
+      2388.56,
+      9244.59,
+      48.53,
+      523.38,
+      2388.56,
+      8293.72,
+      8.5836,
+      400.0,
+      39.43,
+      23.6184
+    ],
+    "clip_range": [
+      -0.5,
+      1.5
+    ],
+    "formula": "x_scaled = clip((x - min) / (max - min), -0.5, 1.5)"
+  },
+  "output": {
+    "shape": [
+      -1,
+      3
+    ],
+    "dtype": "float32",
+    "meaning": "unnormalized logits over degradation stage",
+    "class_labels": [
+      "healthy",
+      "degrading",
+      "critical"
+    ],
+    "class_index": {
+      "healthy": 0,
+      "degrading": 1,
+      "critical": 2
+    },
+    "postprocess": "softmax(logits, axis=-1) for probabilities; argmax for the label",
+    "note": "stages are derived from RUL thresholds, not from flight phases"
+  },
+  "thresholds": {
+    "stage_definition_rul": {
+      "healthy": "RUL > 75",
+      "degrading": "30 < RUL <= 75",
+      "critical": "RUL <= 30"
+    },
+    "decision_rule": "argmax over the 3 logits",
+    "note": "no probability cutoff is baked in; the app may apply a lower threshold on 'critical' to trade precision for recall"
+  },
+  "artifacts": {
+    "torchscript": "lstm.pt",
+    "onnx": "lstm.onnx"
+  },
+  "inference": {
+    "protocol": [
+      "1. Keep a rolling buffer of the last 30 cycles, each holding the 17 features in input.feature_names order.",
+      "2. Normalize every value with normalization.min/max per the stated formula.",
+      "3. Shape the buffer to (1, 30, 17) float32, axis 1 ordered oldest -> newest.",
+      "4. Run the graph -> (1, 3) logits.",
+      "5. probabilities = softmax(logits); stage = output.class_labels[argmax(logits)]."
+    ],
+    "onnx_input_name": "input",
+    "onnx_output_name": "output",
+    "stateless": true,
+    "padding_rule": "fewer than 30 cycles available: left-pad by repeating the oldest row, which is how training sequences were built",
+    "label_position": "the stage refers to the LAST cycle in the window"
+  },
+  "metrics": {
+    "best_val_macro_f1": 0.8547491384359208,
+    "best_epoch": 13,
+    "class_weights": {
+      "healthy": 0.45720144956035624,
+      "degrading": 1.0371941455740652,
+      "critical": 1.5056044048655786
+    },
+    "train_class_counts": {
+      "healthy": 7146,
+      "degrading": 3150,
+      "critical": 2170
+    },
+    "val": {
+      "accuracy": 0.86080740117746,
+      "balanced_accuracy": 0.8507880093340514,
+      "macro_f1": 0.8547491384359208,
+      "weighted_f1": 0.862052803210259,
+      "per_class": {
+        "healthy": {
+          "precision": 0.9056143205858421,
+          "recall": 0.8990306946688207,
+          "f1": 0.9023104985812728,
+          "support": 1238
+        },
+        "degrading": {
+          "precision": 0.7395543175487466,
+          "recall": 0.7866666666666666,
+          "f1": 0.7623833452979182,
+          "support": 675
+        },
+        "critical": {
+          "precision": 0.9350348027842227,
+          "recall": 0.8666666666666667,
+          "f1": 0.8995535714285714,
+          "support": 465
+        }
+      },
+      "confusion_matrix": [
+        [
+          1113,
+          125,
+          0
+        ],
+        [
+          116,
+          531,
+          28
+        ],
+        [
+          0,
+          62,
+          403
+        ]
+      ],
+      "confusion_matrix_axes": "rows = true stage, columns = predicted stage"
+    },
+    "test": {
+      "accuracy": 0.8690682369241427,
+      "balanced_accuracy": 0.8641373035917294,
+      "macro_f1": 0.8520276616097759,
+      "weighted_f1": 0.8709241510328547,
+      "per_class": {
+        "healthy": {
+          "precision": 0.937989163154726,
+          "recall": 0.8918145392100744,
+          "f1": 0.9143192488262911,
+          "support": 1747
+        },
+        "degrading": {
+          "precision": 0.7025920873124147,
+          "recall": 0.762962962962963,
+          "f1": 0.7315340909090909,
+          "support": 675
+        },
+        "critical": {
+          "precision": 0.8843813387423936,
+          "recall": 0.9376344086021505,
+          "f1": 0.9102296450939458,
+          "support": 465
+        }
+      },
+      "confusion_matrix": [
+        [
+          1558,
+          189,
+          0
+        ],
+        [
+          103,
+          515,
+          57
+        ],
+        [
+          0,
+          29,
+          436
+        ]
+      ],
+      "confusion_matrix_axes": "rows = true stage, columns = predicted stage"
+    },
+    "official": {
+      "accuracy": 0.915457041977246,
+      "balanced_accuracy": 0.8441029791425113,
+      "macro_f1": 0.8300856362405139,
+      "weighted_f1": 0.9175872075117381,
+      "per_class": {
+        "healthy": {
+          "precision": 0.9674407175328664,
+          "recall": 0.9444644356483147,
+          "f1": 0.9558145180869143,
+          "support": 8337
+        },
+        "degrading": {
+          "precision": 0.6934264107038977,
+          "recall": 0.7806155861165684,
+          "f1": 0.7344423906346272,
+          "support": 1527
+        },
+        "critical": {
+          "precision": 0.7928994082840237,
+          "recall": 0.8072289156626506,
+          "f1": 0.8,
+          "support": 332
+        }
+      },
+      "confusion_matrix": [
+        [
+          7874,
+          463,
+          0
+        ],
+        [
+          265,
+          1192,
+          70
+        ],
+        [
+          0,
+          64,
+          268
+        ]
+      ],
+      "confusion_matrix_axes": "rows = true stage, columns = predicted stage"
+    }
+  },
+  "architecture": {
+    "type": "lstm_classifier",
+    "input_size": 17,
+    "hidden_size": 64,
+    "num_layers": 2,
+    "dropout": 0.3,
+    "readout": "final timestep hidden state -> linear",
+    "n_classes": 3,
+    "parameters": 54723
+  },
+  "training": {
+    "loss": "cross entropy with inverse-frequency class weights",
+    "model_selection": "best validation macro-F1"
+  }
+}

@@ -1,0 +1,214 @@
+{
+  "bundle_version": "1.0",
+  "schema": {
+    "names": [
+      "col_2",
+      "col_3",
+      "col_6",
+      "col_7",
+      "col_8",
+      "col_10",
+      "col_11",
+      "col_12",
+      "col_13",
+      "col_15",
+      "col_16",
+      "col_17",
+      "col_18",
+      "col_19",
+      "col_21",
+      "col_24",
+      "col_25"
+    ],
+    "n_features": 17,
+    "min": [
+      -0.0087,
+      -0.0006,
+      641.21,
+      1571.04,
+      1382.25,
+      21.6,
+      549.85,
+      2387.9,
+      9021.73,
+      46.85,
+      518.69,
+      2387.88,
+      8099.94,
+      8.3249,
+      388.0,
+      38.14,
+      22.8942
+    ],
+    "max": [
+      0.0087,
+      0.0006,
+      644.53,
+      1616.91,
+      1441.49,
+      21.61,
+      556.06,
+      2388.56,
+      9244.59,
+      48.53,
+      523.38,
+      2388.56,
+      8293.72,
+      8.5848,
+      400.0,
+      39.43,
+      23.6184
+    ],
+    "clip_range": [
+      -0.5,
+      1.5
+    ],
+    "dropped_constant": [
+      "col_4",
+      "col_5",
+      "col_9",
+      "col_14",
+      "col_20",
+      "col_22",
+      "col_23"
+    ],
+    "formula": "x_scaled = clip((x - min) / (max - min), -0.5, 1.5)"
+  },
+  "window": 30,
+  "horizon": 15,
+  "labelled": true,
+  "class_labels": [
+    "healthy",
+    "degrading",
+    "critical"
+  ],
+  "calibration": {
+    "reference": 0.0025062261847779155,
+    "spread": 0.0042107194429263466,
+    "threshold": 0.015138384513556955,
+    "n_baseline": 6186,
+    "percentile": 99.0,
+    "half_life": 3.0,
+    "threshold_deviations": 3.0,
+    "health_formula": "100 * 2 ** (-max(d, 0) / half_life), d = (score - reference) / spread"
+  },
+  "feature_importances": [
+    {
+      "feature": "col_13",
+      "importance": 26.16328426345601
+    },
+    {
+      "feature": "col_15",
+      "importance": 12.115750573003787
+    },
+    {
+      "feature": "col_18",
+      "importance": 9.775060950763871
+    },
+    {
+      "feature": "col_8",
+      "importance": 9.47075150538989
+    },
+    {
+      "feature": "col_16",
+      "importance": 8.48497740106246
+    },
+    {
+      "feature": "col_11",
+      "importance": 5.800557829335428
+    },
+    {
+      "feature": "col_19",
+      "importance": 5.386264498319043
+    },
+    {
+      "feature": "col_17",
+      "importance": 4.028980155441831
+    },
+    {
+      "feature": "col_6",
+      "importance": 3.4280587647217557
+    },
+    {
+      "feature": "col_24",
+      "importance": 3.1937755674396513
+    },
+    {
+      "feature": "col_12",
+      "importance": 2.979127810864591
+    },
+    {
+      "feature": "col_25",
+      "importance": 2.8167459285310534
+    },
+    {
+      "feature": "col_7",
+      "importance": 2.6155657968643085
+    },
+    {
+      "feature": "col_21",
+      "importance": 1.8432823257537856
+    },
+    {
+      "feature": "col_2",
+      "importance": 1.20305947529255
+    },
+    {
+      "feature": "col_3",
+      "importance": 0.6897859370669246
+    },
+    {
+      "feature": "col_10",
+      "importance": 0.004971216693068023
+    }
+  ],
+  "metrics": {
+    "autoencoder": {
+      "reconstruction_mse": 0.0027280085636715344,
+      "layers": [
+        17,
+        34,
+        17,
+        5
+      ]
+    },
+    "health": {
+      "rmse_health_points": 13.296379777894172,
+      "mae_health_points": 9.61273095685685
+    },
+    "stage": {
+      "train_accuracy": 0.8646212011051331,
+      "recall_per_class": {
+        "healthy": 0.8477476786125393,
+        "degrading": 0.8333333333333334,
+        "critical": 0.9809677419354839
+      },
+      "class_counts": {
+        "healthy": 13031,
+        "degrading": 4500,
+        "critical": 3100
+      }
+    },
+    "baseline": {
+      "reference": 0.0025062261847779155,
+      "spread": 0.0042107194429263466,
+      "threshold": 0.015138384513556955,
+      "n_baseline": 6186,
+      "percentile": 99.0,
+      "half_life": 3.0,
+      "threshold_deviations": 3.0,
+      "health_formula": "100 * 2 ** (-max(d, 0) / half_life), d = (score - reference) / spread"
+    },
+    "lead_channel": "col_3",
+    "n_rows": 20631,
+    "n_channels": 17
+  },
+  "elapsed_s": 43.19990799995139,
+  "source": "NASA C-MAPSS FD001 (run-to-failure, supervised)",
+  "files": {
+    "autoencoder": "autoencoder.pt",
+    "stage_lstm": "stage_lstm.pt",
+    "health": "health.cbm",
+    "gp": "gp.pkl"
+  }
+}

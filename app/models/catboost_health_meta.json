@@ -1,0 +1,380 @@
+{
+  "name": "catboost_health",
+  "task": "health_score_regression",
+  "schema_version": "1.0",
+  "created_utc": "2026-09-19T17:33:38+00:00",
+  "library_versions": {
+    "python": "3.13.2",
+    "numpy": "2.2.6",
+    "torch": "2.11.0+cpu",
+    "sklearn": "1.8.0",
+    "catboost": "1.2.10",
+    "lightgbm": "4.7.0",
+    "onnx": "1.23.0"
+  },
+  "dataset": {
+    "name": "NASA C-MAPSS FD001",
+    "files": [
+      "train_FD001.txt",
+      "test_FD001.txt",
+      "RUL_FD001.txt"
+    ],
+    "split_by": "engine unit id",
+    "split_seed": 1337,
+    "engines": {
+      "train": 70,
+      "val": 15,
+      "test": 15
+    },
+    "rul_ceiling": 125
+  },
+  "input": {
+    "feature_names": [
+      "op1",
+      "op2",
+      "s2",
+      "s3",
+      "s4",
+      "s6",
+      "s7",
+      "s8",
+      "s9",
+      "s11",
+      "s12",
+      "s13",
+      "s14",
+      "s15",
+      "s17",
+      "s20",
+      "s21"
+    ],
+    "n_features": 17,
+    "shape": [
+      -1,
+      17
+    ],
+    "dtype": "float32",
+    "layout": "(batch, 17) -- one cycle per row",
+    "window_length": null,
+    "requires_normalization": true,
+    "feature_order_is_binding": true
+  },
+  "normalization": {
+    "mode": "global",
+    "method": "min_max",
+    "feature_names": [
+      "op1",
+      "op2",
+      "s2",
+      "s3",
+      "s4",
+      "s6",
+      "s7",
+      "s8",
+      "s9",
+      "s11",
+      "s12",
+      "s13",
+      "s14",
+      "s15",
+      "s17",
+      "s20",
+      "s21"
+    ],
+    "min": [
+      -0.0087,
+      -0.0006,
+      641.21,
+      1571.04,
+      1385.19,
+      21.6,
+      550.34,
+      2387.9,
+      9021.73,
+      46.85,
+      518.69,
+      2387.88,
+      8102.82,
+      8.3279,
+      388.0,
+      38.14,
+      22.8942
+    ],
+    "max": [
+      0.0087,
+      0.0006,
+      644.53,
+      1614.93,
+      1438.51,
+      21.61,
+      555.86,
+      2388.56,
+      9244.59,
+      48.53,
+      523.38,
+      2388.56,
+      8293.72,
+      8.5836,
+      400.0,
+      39.43,
+      23.6184
+    ],
+    "clip_range": [
+      -0.5,
+      1.5
+    ],
+    "formula": "x_scaled = clip((x - min) / (max - min), -0.5, 1.5)"
+  },
+  "output": {
+    "shape": [
+      -1
+    ],
+    "dtype": "float64",
+    "meaning": "health score, 100 = as-new, 0 = at failure",
+    "range": [
+      0,
+      100
+    ],
+    "postprocess": "clip to [0, 100] -- the regressor can overshoot slightly",
+    "target_definition": "100 * clip(RUL / 125, 0, 1)",
+    "rul_equivalent": "rul_cycles = health / 100 * 125; an RMSE of h health points equals h * 1.25 cycles of RUL error"
+  },
+  "thresholds": {
+    "suggested_display_bands": {
+      "healthy": "health > 60",
+      "degrading": "24 <= health <= 60",
+      "critical": "health < 24"
+    },
+    "note": "these bands are the LSTM's RUL stage thresholds (75 and 30 cycles) expressed as health points, so the two models agree by construction"
+  },
+  "artifacts": {
+    "catboost": "catboost_health.cbm"
+  },
+  "inference": {
+    "protocol": [
+      "1. Collect one telemetry cycle as the 17 raw features, in input.feature_names order.",
+      "2. Normalize with normalization.min/max per the stated formula.",
+      "3. model = catboost.CatBoostRegressor(); model.load_model('catboost_health.cbm')",
+      "4. health = float(model.predict(x.reshape(1, -1))[0])",
+      "5. health = min(100.0, max(0.0, health))"
+    ],
+    "loader": "catboost.CatBoostRegressor().load_model",
+    "requires": [
+      "catboost",
+      "numpy"
+    ],
+    "stateless": true,
+    "note": "expects the SAME normalized features as the autoencoder, so one normalized row can be fed to both"
+  },
+  "metrics": {
+    "best_iteration": 147,
+    "n_trees": 148,
+    "train": {
+      "rmse_health_points": 13.382411347828233,
+      "mae_health_points": 9.666143255247698,
+      "r2": 0.8387674013066109,
+      "rmse_rul_cycles": 16.72801418478529,
+      "mae_rul_cycles": 12.082679069059623,
+      "rmse_before_clipping": 13.382762457084336,
+      "n_rows": 14496
+    },
+    "val": {
+      "rmse_health_points": 16.235603644853747,
+      "mae_health_points": 11.74649640449354,
+      "r2": 0.7646478041260113,
+      "rmse_rul_cycles": 20.29450455606718,
+      "mae_rul_cycles": 14.683120505616925,
+      "rmse_before_clipping": 16.23584133926245,
+      "n_rows": 2813
+    },
+    "test": {
+      "rmse_health_points": 16.25674508372994,
+      "mae_health_points": 11.037339671839367,
+      "r2": 0.758606650104324,
+      "rmse_rul_cycles": 20.320931354662424,
+      "mae_rul_cycles": 13.79667458979921,
+      "rmse_before_clipping": 16.2607843645139,
+      "n_rows": 3322
+    },
+    "official": {
+      "rmse_health_points": 13.535206705226349,
+      "mae_health_points": 9.235167310945242,
+      "r2": 0.6236548438145106,
+      "rmse_rul_cycles": 16.919008381532937,
+      "mae_rul_cycles": 11.543959138681553,
+      "rmse_before_clipping": 13.543279447993859,
+      "n_rows": 13096
+    },
+    "feature_importances": [
+      {
+        "feature": "s9",
+        "importance": 27.95718225426117
+      },
+      {
+        "feature": "s11",
+        "importance": 13.356404879971242
+      },
+      {
+        "feature": "s14",
+        "importance": 12.399435869479753
+      },
+      {
+        "feature": "s4",
+        "importance": 8.464604849507353
+      },
+      {
+        "feature": "s12",
+        "importance": 8.113342677995494
+      },
+      {
+        "feature": "s7",
+        "importance": 5.98582372343915
+      },
+      {
+        "feature": "s13",
+        "importance": 4.13366030539743
+      },
+      {
+        "feature": "s15",
+        "importance": 3.8673610787361485
+      },
+      {
+        "feature": "s20",
+        "importance": 3.170230789315833
+      },
+      {
+        "feature": "s2",
+        "importance": 2.803221122209961
+      },
+      {
+        "feature": "s21",
+        "importance": 2.6912218024784886
+      },
+      {
+        "feature": "s8",
+        "importance": 2.631086036999223
+      },
+      {
+        "feature": "s17",
+        "importance": 2.198384295313834
+      },
+      {
+        "feature": "s3",
+        "importance": 1.948581624424954
+      },
+      {
+        "feature": "op2",
+        "importance": 0.18156050465061102
+      },
+      {
+        "feature": "op1",
+        "importance": 0.09243811646005111
+      },
+      {
+        "feature": "s6",
+        "importance": 0.0054600693593286264
+      }
+    ],
+    "lightgbm_reference": {
+      "best_iteration": 83,
+      "val": {
+        "rmse_health_points": 16.330390221542135,
+        "mae_health_points": 11.853421599332874,
+        "r2": 0.7618917194964501,
+        "rmse_rul_cycles": 20.412987776927668,
+        "mae_rul_cycles": 14.816776999166093,
+        "rmse_before_clipping": 16.330390221542135,
+        "n_rows": 2813
+      },
+      "test": {
+        "rmse_health_points": 16.2596251583401,
+        "mae_health_points": 11.197360753388802,
+        "r2": 0.7585211111555739,
+        "rmse_rul_cycles": 20.324531447925125,
+        "mae_rul_cycles": 13.996700941736002,
+        "rmse_before_clipping": 16.259879992196073,
+        "n_rows": 3322
+      }
+    }
+  },
+  "hyperparameters": {
+    "iterations": 2000,
+    "depth": 6,
+    "learning_rate": 0.05,
+    "l2_leaf_reg": 3.0,
+    "loss_function": "RMSE",
+    "early_stopping_rounds": 100,
+    "best_iteration": 147
+  },
+  "feature_importances": [
+    {
+      "feature": "s9",
+      "importance": 27.95718225426117
+    },
+    {
+      "feature": "s11",
+      "importance": 13.356404879971242
+    },
+    {
+      "feature": "s14",
+      "importance": 12.399435869479753
+    },
+    {
+      "feature": "s4",
+      "importance": 8.464604849507353
+    },
+    {
+      "feature": "s12",
+      "importance": 8.113342677995494
+    },
+    {
+      "feature": "s7",
+      "importance": 5.98582372343915
+    },
+    {
+      "feature": "s13",
+      "importance": 4.13366030539743
+    },
+    {
+      "feature": "s15",
+      "importance": 3.8673610787361485
+    },
+    {
+      "feature": "s20",
+      "importance": 3.170230789315833
+    },
+    {
+      "feature": "s2",
+      "importance": 2.803221122209961
+    },
+    {
+      "feature": "s21",
+      "importance": 2.6912218024784886
+    },
+    {
+      "feature": "s8",
+      "importance": 2.631086036999223
+    },
+    {
+      "feature": "s17",
+      "importance": 2.198384295313834
+    },
+    {
+      "feature": "s3",
+      "importance": 1.948581624424954
+    },
+    {
+      "feature": "op2",
+      "importance": 0.18156050465061102
+    },
+    {
+      "feature": "op1",
+      "importance": 0.09243811646005111
+    },
+    {
+      "feature": "s6",
+      "importance": 0.0054600693593286264
+    }
+  ],
+  "feature_importance_type": "PredictionValuesChange (CatBoost default, normalized to sum to 100)"
+}

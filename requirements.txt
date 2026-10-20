@@ -1,0 +1,28 @@
+# --- application (PySide6 UI) ---
+PySide6
+pyqtgraph
+numpy
+pyserial
+reportlab
+pytest
+pytest-cov
+matplotlib
+
+# --- ML Analysis tab (live inference AND in-app training) ---
+# The tab trains and runs models in-process, so these are runtime requirements
+# for that tab. The rest of Glance runs without them.
+torch             # autoencoder + stage LSTM
+catboost          # health regressor
+scikit-learn      # Gaussian Process forecaster
+scipy             # GP solver / hyperparameter fitting
+joblib            # model bundle I/O
+pandas            # dataset loading and column auto-detection
+
+# --- offline benchmark pipeline only (ml/train_models.py, ml/evaluate.py) ---
+onnxruntime       # runs the exported .onnx artifacts
+onnx              # ONNX export
+lightgbm          # reference model for catboost_health, not serialized
+
+# onnx pulls in protobuf; >=7 conflicts with google-api-core and streamlit if
+# those are present in the same environment, so keep it below 7.
+protobuf<7,>=5.26.1

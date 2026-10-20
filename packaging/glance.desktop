@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Glance
+Comment=Telemetry Dashboard
+Exec=/usr/bin/glance
+Icon=glance
+Terminal=false
+Type=Application
+Categories=Utility;Science;
+StartupNotify=true
